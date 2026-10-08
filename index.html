@@ -296,8 +296,10 @@ function startPlayback(){
 }
 
 function refreshCover(){
+  const coverTitle = $('coverTitle');
+  if(!coverTitle) return; /* cover replaced by iframe or re-rendered cover */
   const q = queue.find(x => x.id === currentId);
-  $('coverTitle').textContent = q && q.title ? q.title : 'Select a video →';
+  coverTitle.textContent = q && q.title ? q.title : 'Select a video →';
 }
 
 function selectVideo(id){
