@@ -51,6 +51,18 @@ your terminal. A `name.mp3` file appears in your current directory (or
 | `index.html` | The entire site — single self-contained file, no build step, no dependencies beyond Google Fonts and the YouTube embed iframe. |
 | `convert.sh` | One-shot installer for yt-dlp + ffmpeg (macOS/Windows/Linux). |
 
+## Troubleshooting
+
+**"Sign in to confirm you're not a bot"** — YouTube throttles downloads from
+VPNs, hotspots, and datacenter IPs. On a normal home connection yt-dlp usually
+works as-is; if you hit this one, add your browser's session to the command:
+
+```bash
+yt-dlp --cookies-from-browser edge …   # or chrome / brave / firefox
+```
+
+(Uses your browser's YouTube cookies locally; they never leave your machine.)
+
 ## Notes
 
 - Videos are always streamed from YouTube; this site never proxies or stores
