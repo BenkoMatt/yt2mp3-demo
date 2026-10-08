@@ -12,10 +12,15 @@ conversion commands** you run yourself.
   official privacy-enhanced embed player.
 - 📋 **Queue** — build a playlist, stored only in your browser
   (`localStorage`), with titles pulled from YouTube's public oEmbed API.
-- 💾 **Download (locally)** — for the video you're watching, the site shows a
-  ready-to-run [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) command that
-  extracts the audio as a **192kbps VBR MP3**, with your chosen options
-  (thumbnail/metadata embedding, chapter splitting, save-location).
+- ⤓ **Instant download** — the **Download MP3** button (under the player, and
+  a ⤓ icon on every queue row) opens
+  [cobalt.tools](https://cobalt.tools) — a free, open-source media converter —
+  with the video's link already filled in. One click on *Go* and the MP3 saves
+  to your device. Your link is processed by cobalt, not by this site.
+- 💾 **Local download** — for full control, the site builds a ready-to-run
+  [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) command that extracts the audio
+  as a **best-quality VBR MP3** on your own machine — with options for
+  thumbnail/metadata embedding, chapter splitting, and save-location.
 
 ## What it deliberately doesn't do
 

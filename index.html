@@ -47,6 +47,10 @@
   .playcover svg{width:64px;height:64px;transition:transform .15s}
   .playcover:hover svg{transform:scale(1.1)}
   .nowtitle{margin-top:12px;font-weight:600;font-size:15px;min-height:24px}
+  .nowrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+  #dlBtn{flex:none;padding:9px 16px;font-size:14px}
+  .qdl{background:none;border:0;color:var(--ok);font-size:15px;cursor:pointer;padding:4px 2px}
+  .qdl:hover{color:#fff}
   /* queue */
   .queue ul{list-style:none;display:flex;flex-direction:column;gap:8px;max-height:300px;overflow:auto}
   .qitem{display:flex;gap:10px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;cursor:pointer}
@@ -88,8 +92,9 @@
 <body>
 <header>
   <div class="brand">YT<span class="accent">2</span>MP3 <span class="badge">DEMO</span></div>
-  <p class="sub">Queue videos and watch them right here. When you want one as an MP3, this page hands you
-  <b>your own local command</b> — the file is created on <b>your machine</b>, never on a server.</p>
+  <p class="sub">Queue videos and watch them right here. Want one as an MP3? Hit <b>⤓ Download</b> for an
+  instant save via <b>cobalt.tools</b>, or copy a <b>local yt-dlp command</b> — the file is created on
+  <b>your machine</b>, never on a server.</p>
 </header>
 
 <main class="wrap">
@@ -115,7 +120,10 @@
           <div id="coverTitle">Select a video →</div>
         </div>
       </div>
-      <div class="nowtitle" id="nowTitle"></div>
+      <div class="nowrow">
+        <div class="nowtitle" id="nowTitle" style="margin-top:0"></div>
+        <button class="btn" id="dlBtn" type="button" title="Opens cobalt.tools with this video prefilled — click Go there to save the MP3">⤓ Download MP3</button>
+      </div>
     </section>
 
     <!-- side column -->
@@ -131,6 +139,10 @@
 
       <section class="card">
         <h2>Download current video</h2>
+        <button class="btn" id="dlBtn2" type="button" title="Opens cobalt.tools with this video prefilled — click Go there to save the MP3" style="width:100%;margin-bottom:12px">⤓ Download MP3 instantly</button>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;color:var(--mut);font-size:12px">
+          <span style="flex:1;border-top:1px solid var(--line)"></span>or run it yourself<span style="flex:1;border-top:1px solid var(--line)"></span>
+        </div>
         <div class="dltarget" id="dlTarget">—</div>
         <div class="opts">
           <label><input type="checkbox" id="optThumbs" checked> Embed thumbnail &amp; metadata</label>
@@ -141,7 +153,8 @@
           <code id="cmd"></code>
           <button class="copybtn" id="copyBtn" type="button">Copy</button>
         </div>
-        <p class="hint">Runs locally — needs <b>yt-dlp</b> + <b>ffmpeg</b> installed (see below). Nothing is uploaded or stored by this site.</p>
+        <p class="hint"><b>⤓ instant</b> — opens <b>cobalt.tools</b> (open-source converter) with this video prefilled; click <b>Go</b> there to save the MP3.<br>
+        <b>or local</b> — needs <b>yt-dlp</b> + <b>ffmpeg</b> (install via <code>convert.sh</code> below). Either way, files are created on <b>your machine</b> — this site never stores media.</p>
       </section>
     </div>
   </div>
@@ -195,6 +208,26 @@ function saveQueue(){ try{ localStorage.setItem('yt2mp3_queue', JSON.stringify(q
 /* ---------- helpers ---------- */
 function ytUrl(id){ return 'https://www.youtube.com/watch?v=' + id; }
 
+/* ---------- cobalt handoff (instant MP3) ---------- */
+function cobaltUrl(id){
+  return 'https://cobalt.tools/?u=' + encodeURIComponent(ytUrl(id)) + '&a=false&f=true';
+}
+function openCobalt(id, btn){
+  if(!id && btn){
+    const t = btn.textContent;
+    btn.textContent = 'Pick a video first';
+    setTimeout(() => { btn.textContent = t; }, 1500);
+    return;
+  }
+  if(!id) return;
+  window.open(cobaltUrl(id), '_blank', 'noopener');
+  if(btn){
+    const t = btn.textContent;
+    btn.textContent = 'Opened ✓';
+    setTimeout(() => { btn.textContent = t; }, 1500);
+  }
+}
+
 function parseId(input){
   input = (input || '').trim();
   if(!input) return null;
@@ -241,10 +274,16 @@ function renderList(){
       '<img loading="lazy" alt="" src="https://i.ytimg.com/vi/' + q.id + '/mqdefault.jpg">' +
       '<div class="qmeta"><div class="qtitle">' + esc(q.title || 'Video ' + q.id) + '</div>' +
       '<div class="qid">' + q.id + '</div></div>' +
+      '<button class="qdl" title="Get MP3 via cobalt.tools" aria-label="Download MP3 of this video">⤓</button>' +
       '<button class="qdel" data-i="' + i + '" title="Remove" aria-label="Remove from queue">✕</button>';
     li.addEventListener('click', ev => {
-      if(ev.target.closest('.qdel')) return;
+      if(ev.target.closest('.qdel') || ev.target.closest('.qdl')) return;
       selectVideo(q.id);
+    });
+    li.querySelector('.qdl').addEventListener('click', ev => {
+      ev.stopPropagation();
+      selectVideo(q.id, {scroll: false});
+      openCobalt(q.id);
     });
     li.querySelector('.qdel').addEventListener('click', ev => {
       ev.stopPropagation();
@@ -302,7 +341,7 @@ function refreshCover(){
   coverTitle.textContent = q && q.title ? q.title : 'Select a video →';
 }
 
-function selectVideo(id){
+function selectVideo(id, opts){
   if(!id) return;
   currentId = id;
   saveQueue();
@@ -310,7 +349,7 @@ function selectVideo(id){
   renderPlayer();
   renderCmd();
   document.querySelector('section.card:not(.how)') /* scroll top on mobile */;
-  window.scrollTo({top: 0, behavior: 'smooth'});
+  if(!opts || opts.scroll !== false) window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
 /* ---------- command builder ---------- */
@@ -352,6 +391,10 @@ $('copyBtn').addEventListener('click', async () => {
   btn.textContent = 'Copied ✓'; btn.classList.add('done');
   setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('done'); }, 1600);
 });
+
+/* ---------- instant download buttons ---------- */
+$('dlBtn').addEventListener('click', () => openCobalt(currentId, $('dlBtn')));
+$('dlBtn2').addEventListener('click', () => openCobalt(currentId, $('dlBtn2')));
 
 /* ---------- add form ---------- */
 $('addForm').addEventListener('submit', async ev => {
