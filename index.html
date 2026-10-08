@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YT2MP3 · Demo Station</title>
+<meta name="description" content="Demo site: queue YouTube videos, watch them here, and download the MP3 locally with yt-dlp. Static, client-side, GitHub Pages.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#131722; --panel2:#0f1320; --line:#232a3d;
+    --txt:#e8ecf6; --mut:#8b93aa; --acc:#f43f5e; --acc2:#38bdf8; --ok:#34d399;
+    --mono:'JetBrains Mono',ui-monospace,monospace; --rad:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font:16px/1.6 'Inter',system-ui,sans-serif;padding:0 0 60px}
+  header{padding:46px 20px 8px;text-align:center}
+  .brand{font-size:44px;font-weight:800;letter-spacing:-.03em}
+  .brand .accent{color:var(--acc)}
+  .badge{display:inline-block;vertical-align:middle;margin-left:10px;padding:4px 12px;border:1px solid var(--acc);
+         border-radius:999px;font-size:13px;font-weight:600;letter-spacing:.14em;color:var(--acc)}
+  .sub{color:var(--mut);font-size:17px;max-width:640px;margin:10px auto 0}
+  .sub b{color:var(--txt)}
+  .wrap{max-width:1160px;margin:34px auto 0;padding:0 20px;display:grid;gap:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--rad);padding:20px}
+  h2{font-size:14px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin-bottom:14px}
+  /* add bar */
+  .addbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .addbar input{flex:1 1 320px;min-width:240px;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    border-radius:10px;padding:12px 14px;font-size:15px;outline:none}
+  .addbar input:focus{border-color:var(--acc2)}
+  .btn{background:var(--acc);border:0;color:#fff;font-weight:600;font-size:15px;padding:12px 20px;border-radius:10px;cursor:pointer}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--mut)}
+  .btn.ghost:hover{color:var(--txt);border-color:var(--mut)}
+  .msg{width:100%;font-size:14px;color:var(--mut);min-height:1px}
+  .msg.err{color:var(--acc)}
+  .msg.ok{color:var(--ok)}
+  /* grid */
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .frame{position:relative;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden}
+  .frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .playcover{position:absolute;inset:0;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;color:var(--mut);cursor:pointer}
+  .playcover svg{width:64px;height:64px;transition:transform .15s}
+  .playcover:hover svg{transform:scale(1.1)}
+  .nowtitle{margin-top:12px;font-weight:600;font-size:15px;min-height:24px}
+  /* queue */
+  .queue ul{list-style:none;display:flex;flex-direction:column;gap:8px;max-height:300px;overflow:auto}
+  .qitem{display:flex;gap:10px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;cursor:pointer}
+  .qitem:hover{border-color:var(--acc2)}
+  .qitem.active{border-color:var(--acc)}
+  .qitem img{width:84px;height:47px;object-fit:cover;border-radius:6px;flex:none;background:#000}
+  .qmeta{min-width:0;flex:1}
+  .qtitle{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .qid{font-family:var(--mono);font-size:11px;color:var(--mut)}
+  .qdel{background:none;border:0;color:var(--mut);font-size:18px;cursor:pointer;padding:4px 6px}
+  .qdel:hover{color:var(--acc)}
+  .queue .foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;color:var(--mut);font-size:13px}
+  /* download */
+  .dltarget{font-family:var(--mono);font-size:12.5px;color:var(--acc2);word-break:break-all;margin-bottom:12px}
+  .opts{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+  .opts label{display:flex;gap:9px;align-items:center;font-size:14px;color:var(--txt);cursor:pointer}
+  .opts input{accent-color:var(--acc);width:15px;height:15px}
+  .cmdbox{display:flex;gap:8px;align-items:stretch}
+  .cmdbox code{flex:1;background:#05070c;border:1px solid var(--line);border-radius:10px;padding:12px;
+    font-family:var(--mono);font-size:12px;color:#c3e88d;white-space:pre-wrap;word-break:break-all}
+  .copybtn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:0 16px;cursor:pointer;font-weight:600;white-space:nowrap}
+  .copybtn:hover{border-color:var(--acc2)}
+  .copybtn.done{border-color:var(--ok);color:var(--ok)}
+  .hint{font-size:13px;color:var(--mut);margin-top:10px}
+  .hint b{color:var(--txt)}
+  /* how */
+  .how ol{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;counter-reset:step}
+  @media(max-width:900px){.how ol{grid-template-columns:1fr}}
+  .how li{list-style:none;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:16px;counter-increment:step;position:relative}
+  .how li::before{content:counter(step);position:absolute;top:-11px;left:14px;background:var(--acc);color:#fff;
+    font-size:12px;font-weight:800;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .how h3{font-size:15px;margin:6px 0 6px}
+  .how p{font-size:13.5px;color:var(--mut)}
+  .how code{font-family:var(--mono);font-size:12px;color:var(--acc2);word-break:break-all}
+  footer{max-width:1160px;margin:8px auto 0;padding:0 20px;color:var(--mut);font-size:12.5px;text-align:center}
+  footer a{color:var(--acc2)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">YT<span class="accent">2</span>MP3 <span class="badge">DEMO</span></div>
+  <p class="sub">Queue videos and watch them right here. When you want one as an MP3, this page hands you
+  <b>your own local command</b> — the file is created on <b>your machine</b>, never on a server.</p>
+</header>
+
+<main class="wrap">
+  <!-- add bar -->
+  <section class="card addbar">
+    <form id="addForm" style="display:flex;gap:10px;flex-wrap:wrap;flex:1 1 100%">
+      <input id="urlIn" placeholder="Paste a YouTube link (watch / youtu.be / shorts) or an 11-character video ID…" autocomplete="off">
+      <button class="btn" type="submit">Add to queue</button>
+    </form>
+    <div id="addMsg" class="msg"></div>
+  </section>
+
+  <div class="grid">
+    <!-- player -->
+    <section class="card">
+      <h2>Now watching</h2>
+      <div class="frame" id="frame">
+        <div class="playcover" id="playCover" role="button" aria-label="Play selected video">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="32" cy="32" r="30" stroke="#f43f5e" stroke-width="3"/>
+            <path d="M26 20l22 12-22 12z" fill="#f43f5e"/>
+          </svg>
+          <div id="coverTitle">Select a video →</div>
+        </div>
+      </div>
+      <div class="nowtitle" id="nowTitle"></div>
+    </section>
+
+    <!-- side column -->
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <section class="card queue">
+        <h2>Queue <span id="count"></span></h2>
+        <ul id="qlist"></ul>
+        <div class="foot">
+          <span>Click a row to watch · saved in this browser</span>
+          <button class="btn ghost" id="clearBtn" type="button">Clear</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Download current video</h2>
+        <div class="dltarget" id="dlTarget">—</div>
+        <div class="opts">
+          <label><input type="checkbox" id="optThumbs" checked> Embed thumbnail &amp; metadata</label>
+          <label><input type="checkbox" id="optChapters"> Keep chapters (audio + .cue)</label>
+          <label><input type="checkbox" id="optPath"> Save to ~/Music</label>
+        </div>
+        <div class="cmdbox">
+          <code id="cmd"></code>
+          <button class="copybtn" id="copyBtn" type="button">Copy</button>
+        </div>
+        <p class="hint">Runs locally — needs <b>yt-dlp</b> + <b>ffmpeg</b> installed (see below). Nothing is uploaded or stored by this site.</p>
+      </section>
+    </div>
+  </div>
+
+  <!-- how -->
+  <section class="card how">
+    <h2>How the MP3 download works</h2>
+    <ol>
+      <li>
+        <h3>Install the tools</h3>
+        <p>On your computer: <code>git clone</code> this repo and run <code>bash convert.sh</code> — it installs
+        <b>yt-dlp</b> and <b>ffmpeg</b> (macOS: brew · Windows: winget · Linux: apt/dnf/pacman).</p>
+      </li>
+      <li>
+        <h3>Pick your video</h3>
+        <p>Watch it in the player above, then set your options — <code>Copy</code> writes the ready-to-run
+        command for exactly that video to your clipboard.</p>
+      </li>
+      <li>
+        <h3>Run it locally</h3>
+        <p>Paste into a terminal on your own machine. yt-dlp pulls the stream, ffmpeg transcodes it, and an
+        <code>.mp3</code> lands in your folder. This website never touches your files.</p>
+      </li>
+    </ol>
+  </section>
+</main>
+
+<footer>
+  Static demo on GitHub Pages · no accounts, no tracking, videos still served by YouTube ·
+  convert content you have the right to use · see the <a href="https://github.com/BenkoMatt/yt2mp3-demo#readme">README</a> for the how &amp; why.
+</footer>
+
+<script>
+'use strict';
+/* ---------- state ---------- */
+const DEFAULT_IDS = ['dQw4w9WgXcQ','kJQP7kiw5Fk','jNQXAC9IVRw'];
+let queue = [];
+let currentId = null;
+
+function loadQueue(){
+  try{
+    const raw = localStorage.getItem('yt2mp3_queue');
+    if(raw){ const arr = JSON.parse(raw); if(Array.isArray(arr)) queue = arr.filter(x => x && /^[A-Za-z0-9_-]{11}$/.test(x.id)); }
+  }catch(e){ /* fresh start */ }
+  if(!queue.length) queue = DEFAULT_IDS.map(id => ({id}));
+  currentId = queue[0].id;
+}
+
+function saveQueue(){ try{ localStorage.setItem('yt2mp3_queue', JSON.stringify(queue)); }catch(e){} }
+
+/* ---------- helpers ---------- */
+function ytUrl(id){ return 'https://www.youtube.com/watch?v=' + id; }
+
+function parseId(input){
+  input = (input || '').trim();
+  if(!input) return null;
+  if(/^[A-Za-z0-9_-]{11}$/.test(input)) return input;
+  try{
+    const u = new URL(/^https?:\/\//i.test(input) ? input : 'https://' + input);
+    const host = u.hostname.replace(/^www\.|^m\./,'').toLowerCase();
+    let m;
+    if(host === 'youtu.be'){
+      m = u.pathname.slice(1).split('/')[0];
+      return /^[A-Za-z0-9_-]{11}$/.test(m) ? m : null;
+    }
+    if(host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')){
+      const v = u.searchParams.get('v');
+      if(v && /^[A-Za-z0-9_-]{11}$/.test(v)) return v;
+      m = u.pathname.match(/\/(shorts|embed|live|v)\/([A-Za-z0-9_-]{11})/);
+      if(m) return m[2];
+    }
+  }catch(e){}
+  return null;
+}
+
+async function fetchTitle(id){
+  try{
+    const r = await fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent(ytUrl(id)));
+    if(r.ok){ const j = await r.json(); if(j && j.title) return j.title; }
+  }catch(e){}
+  return null;
+}
+
+function esc(s){ const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+/* ---------- rendering ---------- */
+const $ = id => document.getElementById(id);
+const listEl = $('qlist'), countEl = $('count'), cmdEl = $('cmd');
+
+function renderList(){
+  countEl.textContent = queue.length ? '(' + queue.length + ')' : '';
+  listEl.innerHTML = '';
+  queue.forEach((q, i) => {
+    const li = document.createElement('li');
+    li.className = 'qitem' + (q.id === currentId ? ' active' : '');
+    li.innerHTML =
+      '<img loading="lazy" alt="" src="https://i.ytimg.com/vi/' + q.id + '/mqdefault.jpg">' +
+      '<div class="qmeta"><div class="qtitle">' + esc(q.title || 'Video ' + q.id) + '</div>' +
+      '<div class="qid">' + q.id + '</div></div>' +
+      '<button class="qdel" data-i="' + i + '" title="Remove" aria-label="Remove from queue">✕</button>';
+    li.addEventListener('click', ev => {
+      if(ev.target.closest('.qdel')) return;
+      selectVideo(q.id);
+    });
+    li.querySelector('.qdel').addEventListener('click', ev => {
+      ev.stopPropagation();
+      queue.splice(i, 1);
+      if(currentId === q.id){
+        currentId = queue[0] ? queue[0].id : null;
+        renderPlayer();
+      }
+      saveQueue(); renderList(); renderCmd();
+    });
+    listEl.appendChild(li);
+  });
+  if(!queue.length){
+    const li = document.createElement('li');
+    li.className = 'qitem';
+    li.innerHTML = '<div class="qmeta"><div class="qtitle" style="color:var(--mut)">Queue is empty — paste a link above</div></div>';
+    listEl.appendChild(li);
+  }
+}
+
+function renderPlayer(){
+  const frame = $('frame');
+  const q = queue.find(x => x.id === currentId);
+  if(!q){
+    frame.innerHTML = '<div class="playcover"><div>Queue is empty</div></div>';
+    $('nowTitle').textContent = '';
+    return;
+  }
+  const thumb = 'https://i.ytimg.com/vi/' + q.id + '/hqdefault.jpg';
+  frame.innerHTML =
+    '<div class="playcover" role="button" aria-label="Play video">' +
+      '<img alt="" src="' + thumb + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55">' +
+      '<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:relative;width:64px;height:64px">' +
+        '<circle cx="32" cy="32" r="30" fill="#0b0e14" stroke="#f43f5e" stroke-width="3"/>' +
+        '<path d="M26 20l22 12-22 12z" fill="#f43f5e"/></svg>' +
+      '<div style="position:relative;font-weight:600">' + esc(q.title || 'Play') + '</div>' +
+    '</div>';
+  frame.querySelector('.playcover').addEventListener('click', startPlayback);
+  $('nowTitle').textContent = q.title ? ('▶ ' + q.title + '  ·  ' + q.id) : q.id;
+  refreshCover();
+}
+
+function startPlayback(){
+  if(!currentId) return;
+  const frame = $('frame');
+  frame.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + currentId +
+    '?autoplay=1&rel=0&modestbranding=1" title="YouTube player" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>';
+  refreshCover();
+}
+
+function refreshCover(){
+  const q = queue.find(x => x.id === currentId);
+  $('coverTitle').textContent = q && q.title ? q.title : 'Select a video →';
+}
+
+function selectVideo(id){
+  if(!id) return;
+  currentId = id;
+  saveQueue();
+  renderList();
+  renderPlayer();
+  renderCmd();
+  document.querySelector('section.card:not(.how)') /* scroll top on mobile */;
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+/* ---------- command builder ---------- */
+function readOpts(){
+  const f = [];
+  if($('optThumbs').checked) f.push('--embed-thumbnail', '--embed-metadata');
+  if($('optChapters').checked) f.push('--split-chapters');
+  const out = $('optPath').checked ? '-P "~/Music" ' : '';
+  return {f, out};
+}
+
+function renderCmd(){
+  if(!currentId){
+    cmdEl.textContent = '# add a video to the queue first';
+    $('dlTarget').textContent = '—';
+    return;
+  }
+  const {f, out} = readOpts();
+  const cmd = 'yt-dlp -x --audio-format mp3 --audio-quality 0 ' + out +
+    (f.length ? f.join(' ') + ' ' : '') + '-o "%(title)s.%(ext)s" "' + ytUrl(currentId) + '"';
+  cmdEl.textContent = cmd;
+  $('dlTarget').textContent = 'target → ' + (queue.find(x => x.id === currentId) ? (queue.find(x => x.id === currentId).title || currentId) : currentId);
+}
+
+$('optThumbs').addEventListener('change', renderCmd);
+$('optChapters').addEventListener('change', renderCmd);
+$('optPath').addEventListener('change', renderCmd);
+
+$('copyBtn').addEventListener('click', async () => {
+  const btn = $('copyBtn');
+  try{
+    await navigator.clipboard.writeText(cmdEl.textContent);
+  }catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = cmdEl.textContent;
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); ta.remove();
+  }
+  btn.textContent = 'Copied ✓'; btn.classList.add('done');
+  setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('done'); }, 1600);
+});
+
+/* ---------- add form ---------- */
+$('addForm').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const msg = $('addMsg');
+  msg.className = 'msg';
+  const input = $('urlIn').value;
+  const id = parseId(input);
+  if(!id){
+    msg.classList.add('err');
+    msg.textContent = "That doesn't look like a YouTube link or video ID.";
+    return;
+  }
+  if(queue.some(q => q.id === id)){
+    msg.classList.add('ok');
+    msg.textContent = 'Already in the queue — switching to it.';
+    selectVideo(id);
+    $('urlIn').value = '';
+    return;
+  }
+  const item = {id};
+  queue.push(item);
+  if(queue.length === 1) currentId = id;
+  saveQueue();
+  renderList();
+  renderCmd();
+  msg.classList.add('ok');
+  msg.textContent = 'Added ' + id + ' ✓ fetching title…';
+  $('urlIn').value = '';
+  item.title = await fetchTitle(id);
+  saveQueue();
+  if(currentId === id) renderPlayer();
+  renderList();
+  msg.textContent = 'Added "' + (item.title || id) + '" ✓';
+});
+
+$('clearBtn').addEventListener('click', () => {
+  queue = [];
+  currentId = null;
+  saveQueue();
+  renderList();
+  renderPlayer();
+  renderCmd();
+});
+
+/* ---------- boot ---------- */
+loadQueue();
+$('playCover').addEventListener('click', startPlayback);
+renderList();
+renderPlayer();
+renderCmd();
+queue.forEach(async (q, i) => { if(!q.title){ queue[i].title = await fetchTitle(q.id); saveQueue(); if(q.id === currentId) renderPlayer(); renderList(); } });
+</script>
+</body>
+</html>
